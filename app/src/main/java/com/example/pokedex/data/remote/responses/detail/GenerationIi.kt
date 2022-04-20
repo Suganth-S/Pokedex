@@ -1,4 +1,5 @@
-package com.example.pokedex.data.remote.responses.detail
+package com.example.pokedex.data.remote.responses
+
 
 data class GenerationIi(
     val crystal: Crystal,
