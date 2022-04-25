@@ -4,13 +4,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
@@ -76,6 +74,8 @@ fun PokemonListScreen(
             ) {
 
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            PokemonList(navController = navController)
         }
     }
 }
@@ -123,6 +123,63 @@ fun SearchBar(
                 color = Color.LightGray,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
             )
+        }
+    }
+}
+
+@Composable
+fun PokemonList(
+    navController: NavController,
+    viewModel: PokemonListViewModel = hiltNavGraphViewModel()
+){
+    val pokemonList by remember {
+        viewModel.pokemonList
+    }
+
+    val endReached by remember {
+        viewModel.endReached
+    }
+
+    val loadError by remember {
+        viewModel.loadError
+    }
+
+    val isLoading by remember {
+        viewModel.isLoading
+    }
+
+    /**
+     * In our app, we actually  load two pokemon is a row and for our lazy column , one row that consists
+     * of two pokemon is actually considered as one item so we need to make a little calulation for the item count
+     *
+     */
+    LazyColumn(contentPadding = PaddingValues(16.dp)){
+        val itemCunt = if(pokemonList.size %2 ==0 ){
+            pokemonList.size/2
+        }else{
+            pokemonList.size / 2 + 1
+        }
+        items(itemCunt){
+            if(it >= itemCunt-1 && !endReached)
+            {
+                viewModel.loadPokemonPaginated()
+            }
+            PokedexRow(rowIndex = it, entries = pokemonList, navController = navController)
+        }
+    }
+
+    Box(
+        contentAlignment = Center,
+        modifier = Modifier.fillMaxSize()
+    ){
+        if (isLoading){
+            CircularProgressIndicator(color = MaterialTheme.colors.primary)
+        }
+        if(loadError.isNotEmpty())
+        {
+            RetrySection(error = loadError) {
+                viewModel.loadPokemonPaginated()
+            }
         }
     }
 }
@@ -211,7 +268,6 @@ fun PokedexEntry(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-
         }
     }
 }
@@ -230,10 +286,10 @@ fun PokedexRow(
                modifier = Modifier.weight(1f)
            )
             Spacer(modifier = Modifier.width(16.dp))
-            if (entries.size >= rowIndex*2 + 2)
+            if (entries.size >= rowIndex * 2 + 2)
             {
                 PokedexEntry(
-                    entry = entries[rowIndex * 2],
+                    entry = entries[rowIndex * 2 + 1],
                     navController = navController,
                     modifier = Modifier.weight(1f)
                 )
@@ -241,6 +297,23 @@ fun PokedexRow(
                 Spacer(modifier = Modifier.weight(1f))
             }
         }
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun RetrySection(
+    error: String,
+    onRetry: () -> Unit
+){
+    Column {
+        Text(error, color = Color.Red, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { onRetry() },
+            modifier = Modifier.align(CenterHorizontally)
+        ) {
+            Text(text = "Retry")
+        }
     }
 }
