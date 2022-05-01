@@ -9,12 +9,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.capitalize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.palette.graphics.Palette
 import com.example.pokedex.data.model.PokedexListEntry
 import com.example.pokedex.repository.PokemonRepository
 import com.example.pokedex.util.Constants.PAGE_SIZE
 import com.example.pokedex.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
@@ -30,8 +32,46 @@ class PokemonListViewModel @Inject constructor(
     var isLoading = mutableStateOf(false)
     var endReached = mutableStateOf(false)
 
+    //cache loaded and pokemon and used for search
+    private var cachedPokemonList = listOf<PokedexListEntry>()
+    private var isSearchStarting = true
+    var isSearching = mutableStateOf(false)
+
     init {
         loadPokemonPaginated()
+    }
+
+    fun searchPokemon(query:String){
+        val listToSearch = if(isSearchStarting){
+            pokemonList.value
+        }else{
+            cachedPokemonList
+        }
+        viewModelScope.launch(Dispatchers.Default) {
+            if(query.isEmpty())
+            {
+                pokemonList.value = cachedPokemonList
+                isSearching.value = false
+                isSearchStarting = true
+                return@launch
+            }
+            val result = listToSearch.filter {
+                it.pokemonName.contains(query.trim(), ignoreCase = true) ||
+                            it.number.toString() == query.trim()
+            }
+
+            if(isSearchStarting)
+            {
+                cachedPokemonList = pokemonList.value
+                isSearchStarting = false
+            }
+            /**
+             * results are the filtered pokemon list and if we set value to these results, these will automatically
+             * displayed in our lazy column because we also use same function in our pagination function
+             */
+            pokemonList.value = result
+            isSearching.value = true
+        }
     }
 
     fun loadPokemonPaginated() {

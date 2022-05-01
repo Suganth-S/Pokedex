@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltNavGraphViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.navigate
 import coil.request.ImageRequest
@@ -49,10 +50,11 @@ import com.google.accompanist.coil.CoilImage
  */
 @Composable
 fun PokemonListScreen(
-    navController: NavController
+    navController: NavController,
+    viewModel: PokemonListViewModel = hiltNavGraphViewModel()
 ) {
     Surface(
-        color = MaterialTheme.colors.background,
+         color = MaterialTheme.colors.background,
         modifier = Modifier.fillMaxSize()
     ) {
         Column {
@@ -72,7 +74,7 @@ fun PokemonListScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-
+                viewModel.searchPokemon(it)
             }
             Spacer(modifier = Modifier.height(16.dp))
             PokemonList(navController = navController)
@@ -114,7 +116,7 @@ fun SearchBar(
                 .background(Color.White, CircleShape)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
                 .onFocusChanged {
-                    isHintDisplayed = it != FocusState.Active
+                    isHintDisplayed = it != FocusState.Active && text.isNotEmpty()
                 }
         )
         if (isHintDisplayed) {
@@ -131,7 +133,7 @@ fun SearchBar(
 fun PokemonList(
     navController: NavController,
     viewModel: PokemonListViewModel = hiltNavGraphViewModel()
-){
+) {
     val pokemonList by remember {
         viewModel.pokemonList
     }
@@ -148,20 +150,22 @@ fun PokemonList(
         viewModel.isLoading
     }
 
+    val isSearching by remember {
+        viewModel.isSearching
+    }
     /**
      * In our app, we actually  load two pokemon is a row and for our lazy column , one row that consists
      * of two pokemon is actually considered as one item so we need to make a little calulation for the item count
      *
      */
-    LazyColumn(contentPadding = PaddingValues(16.dp)){
-        val itemCunt = if(pokemonList.size %2 ==0 ){
-            pokemonList.size/2
-        }else{
+    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        val itemCunt = if (pokemonList.size % 2 == 0) {
+            pokemonList.size / 2
+        } else {
             pokemonList.size / 2 + 1
         }
-        items(itemCunt){
-            if(it >= itemCunt-1 && !endReached)
-            {
+        items(itemCunt) {
+            if (it >= itemCunt - 1 && !endReached && !isLoading && !isSearching) {
                 viewModel.loadPokemonPaginated()
             }
             PokedexRow(rowIndex = it, entries = pokemonList, navController = navController)
@@ -171,12 +175,11 @@ fun PokemonList(
     Box(
         contentAlignment = Center,
         modifier = Modifier.fillMaxSize()
-    ){
-        if (isLoading){
+    ) {
+        if (isLoading) {
             CircularProgressIndicator(color = MaterialTheme.colors.primary)
         }
-        if(loadError.isNotEmpty())
-        {
+        if (loadError.isNotEmpty()) {
             RetrySection(error = loadError) {
                 viewModel.loadPokemonPaginated()
             }
@@ -249,7 +252,7 @@ fun PokedexEntry(
                         }
                     }
                     .build(),
-                contentDescription =  entry.pokemonName,
+                contentDescription = entry.pokemonName,
                 fadeIn = true,
                 modifier = Modifier
                     .size(120.dp)
@@ -274,26 +277,25 @@ fun PokedexEntry(
 
 @Composable
 fun PokedexRow(
-    rowIndex:Int,
+    rowIndex: Int,
     entries: List<PokedexListEntry>,
     navController: NavController
-){
+) {
     Column {
         Row {
-           PokedexEntry(
-               entry = entries[rowIndex * 2],
-               navController = navController,
-               modifier = Modifier.weight(1f)
-           )
+            PokedexEntry(
+                entry = entries[rowIndex * 2],
+                navController = navController,
+                modifier = Modifier.weight(1f)
+            )
             Spacer(modifier = Modifier.width(16.dp))
-            if (entries.size >= rowIndex * 2 + 2)
-            {
+            if (entries.size >= rowIndex * 2 + 2) {
                 PokedexEntry(
                     entry = entries[rowIndex * 2 + 1],
                     navController = navController,
                     modifier = Modifier.weight(1f)
                 )
-            }else{
+            } else {
                 Spacer(modifier = Modifier.weight(1f))
             }
         }
@@ -305,7 +307,7 @@ fun PokedexRow(
 fun RetrySection(
     error: String,
     onRetry: () -> Unit
-){
+) {
     Column {
         Text(error, color = Color.Red, fontSize = 18.sp)
         Spacer(modifier = Modifier.height(8.dp))
