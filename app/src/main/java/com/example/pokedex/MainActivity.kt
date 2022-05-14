@@ -15,9 +15,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navArgument
 import androidx.navigation.compose.rememberNavController
+import com.example.pokedex.pokemondetail.PokemonDetailScreen
 import com.example.pokedex.pokemonlist.PokemonListScreen
 import com.example.pokedex.ui.theme.PokedexTheme
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.*
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -37,51 +39,42 @@ class MainActivity : ComponentActivity() {
                  *
                  * Note: We cannot pass those args as function instead what we ned to do is, we need to treat these route similar to a url,
                  *       so also give thisute just path parameters, just as a url,using a slash
-                  */
+                 */
                 val navController = rememberNavController()
                 NavHost(
                     navController = navController,
                     startDestination = "pokemon_list_screen"
-                ){
-                    composable("pokemon_list_screen"){
+                ) {
+                    composable("pokemon_list_screen") {
                         PokemonListScreen(navController = navController)
                     }
                     composable(
                         "pokemon_detail_screen/{dominantColor}/{pokemonName}",
                         arguments = listOf(
-                            navArgument("dominantColor"){
-                                //define the type of dominantColor
+                            navArgument("dominantColor") {
                                 type = NavType.IntType
                             },
-                            navArgument("pokemonName"){
+                            navArgument("pokemonName") {
                                 type = NavType.StringType
                             }
                         )
-                    ){
+                    ) {
                         val dominantColor = remember {
                             val color = it.arguments?.getInt("dominantColor")
                             color?.let { Color(it) } ?: Color.White
                         }
 
                         val pokemonName = remember {
-                            it.arguments?.getString("pokemonName") }
+                            it.arguments?.getString("pokemonName")
                         }
-
+                        PokemonDetailScreen(
+                            dominantColor = dominantColor,
+                            pokemonName = pokemonName?.toLowerCase(Locale.ROOT) ?: "",
+                            navController = navController
+                        )
                     }
                 }
             }
         }
-    }
-
-@Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    PokedexTheme {
-        Greeting("Android")
     }
 }
